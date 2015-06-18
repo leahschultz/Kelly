@@ -1,1 +1,2 @@
 cor.test(kelly$mincome, kelly$mworksat)
+a+b=c
