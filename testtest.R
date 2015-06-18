@@ -1,0 +1,1 @@
+cor.test(kelly$mincome, kelly$mworksat)
