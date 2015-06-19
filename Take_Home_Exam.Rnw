@@ -1,0 +1,384 @@
+\documentclass{article}
+\setlength\parindent{0pt}
+\usepackage{fullpage}
+\usepackage{lscape}
+\usepackage{xcolor}
+
+\begin{document}
+\title{Quantitative Methods II: Take-Home Exam}
+\author{Leah Schultz}
+
+\maketitle
+\section*{Part 1}
+\subsection*{\#1}
+$\hat Y$ = b0 + b1(X1) + b2(X2)\\\\
+Average grades = b0 + b1(satisfaction with college experience) + b2(time spent studying)
+\\\\
+I predict that higher college satisfaction and more time spent studying will both predict higher average grades over four years of college.
+
+\subsection*{\#2}
+The F statistic and its p-value indicate whether the model predicted a significant amount of variance in students' grades. The sizes of the coefficients indicate how strongly time spent studying and satisfaction with the college experience are uniquely related to grades, i.e. the strength of the relationship between study time and grades when controlling for satisfaction, and the strength of the relationship between satisfaction and grades when controlling for study time. In addition, the signs of the coefficients indicate the direction of these variables' relationships to the criterion variable. The sizes of the standard errors indicate the precision of the estimate of each coefficient's value. The p-values indicate whether each study time and satisfaction each predicted a significant amount of unique variance, and the $R^{2}$ value shows how much of the total variance in grades the model accounted for.
+\subsection*{\#3}
+A multiple regression was conducted to analyze the relationship between satisfaction with college experience and total time spent studying with average grades over four years of college. Students' average grades were regressed on college satisfaction and time spent studying over four years. The overall model did not account for a significant amount of variance in average grades, $R^{2}$ = .03, F(2,162) = 2.79, p = .06. Though students' satisfaction with their college experience was not related to their grades, students who spent more time studying had better grades during their four years in college (\textit{b*} = .20, 95\% CI [.02, .38]).\\
+<<tidy=TRUE,include=FALSE>>=
+harvarddata2<-read.csv("~/Dropbox/Stats/Take Home Exam/harvarddata2.csv")
+harvarddata<-harvarddata2[!is.na(harvarddata2$Zavggrade)&!is.na(harvarddata2$Zavgstudy)&!is.na(harvarddata2$Zsatisfaction),]
+@
+<<tidy=TRUE>>=
+gradesmodel<-(lm(harvarddata$Zavggrade~harvarddata$Zavgstudy+harvarddata$Zsatisfaction))
+summary(gradesmodel)
+@
+\subsection*{\#4}
+
+Six assumptions to test:\\
+
+1) \underline{No measurement error in independent variables}: I calculated Cronbach's alpha values to estimate the reliability of my independent variables. Cronbach's alpha was .78 for the four study time items, and .77 for the three college satisfaction items. This gives me confidence that my measures are not introducing much error to my model.\\
+<<tidy=TRUE,include=FALSE>>=
+library(psych)
+Zavgstudy.df<-data.frame(harvarddata2$Zstudy1,harvarddata2$Zstudy2,harvarddata2$Zstudy3,harvarddata2$Zstudy4)
+Zsatisfaction.df<-data.frame(harvarddata2$Zenjoy,harvarddata2$Zsatharvard,harvarddata2$Zrightchoice)
+@
+<<tidy=TRUE>>=
+alpha(Zavgstudy.df)#Cronbach's alpha for "study time" composite
+alpha(Zsatisfaction.df)#Cronbach's alpha for "satisfaction" composite
+@
+
+2) \underline{Correctly specified form}: I plotted the model's residuals against its fitted values to observe if a linear trend best fits the data. The horizontal line appears to fit the distribution reasonably well, suggesting that there is no need to add higher-order squared or cubed terms to better account for a possible curvilinear component of the data. \\\\
+3) \underline{Homoscedasticity}: I again checked the plot of the fitted values against the residuals, but this time looked to see if the error was constant at all levels of the predictor variables; the error looked to be distributed evenly across all levels of the predictors, suggesting that the homoscedasticity assumption was not violated. However, there do seem to be a few outliers, most notably case \#80 (more on this in Q\#5).
+<<tidy=TRUE,fig.width=5,fig.height=3>>=
+plot(gradesmodel,which=1)
+@
+\vspace{5mm}
+4) \underline{Correctly specified model}: To understand if any predictor variables have been omitted, I could think more critically about my hypotheses, considering all of the variables which might possibly influence students' grades. For instance, perhaps I could include "IQ" or "time spent attending parties" as additional predictor variables in future models, to predict greater amounts of variance. The low amount of variance predicted by my current model seems to indicate that this may be especially warranted.\\\\
+5) \underline{Independence among the errors}: I plotted residuals against participant numbers to understand if errors might be systematically related over time, but found no relationship between participant number and residuals; they seemed to be distributed quite evenly across participant number.
+<<tidy=TRUE,fig.width=5,fig.height=3>>=
+plot(as.numeric(harvarddata$id),gradesmodel$residuals,xlab="Participant ID",ylab="Residuals")
+@
+\vspace{10mm}
+6) \underline{Normality of the errors}: I created a q-q plot to view the distribution of residuals, and found that the distribution appeared to deviate from normality at its extremes. I then plotted the quartiles against the standardized residuals once more but this time included confidence bands; though there are several extreme residuals, they don't appear to fall beyond the boundaries of the confidence bands.
+<<tidy=TRUE,fig.width=6,fig.height=4,message=FALSE,warning=FALSE>>=
+plot(gradesmodel,which=2)
+library(car)
+qqPlot(gradesmodel$residuals)
+@
+\subsection*{\#5}
+I plotted the DFFITS, Cook's Distance, and DFBETA values for the model to check for particularly influential data points.There were a few outliers that, if deleted, would change the results; in particular, by using the "identify" function in R, I found that case \#80 seemed to have the highest influence, since it appeared as an extreme value in all three plots. Its DFFITS value was -.53, meaning that if it was excluded from the analysis, its predicted value would decrease by .53 standardized units. In addition, its Cook's distance value was by far the highest, and its high DFBETAS value indicated that it would change both coefficients in the regression considerably if it was removed. I checked the individual's scores to understand his outlier status; I found that though his grades were almost 1.5 standard deviations below the mean, his time spent studying was 2.5 standard deviations ABOVE the mean -- the extreme negative association between his grades and his study time definitely bucked the trend.
+\\\\
+To explore further, I created a new dataset with case 80 removed, and re-ran the model. After the three plots, I've included output first from the original model, and then from the revised model with the outlier removed. I found that with the deletion of this single data point, the coefficient for study time would increase by almost .05, and would reach a p = .01 level of significance where it had previously only been at p = 0.04. In addition, the variance explained and the F-value of the entire model would increase such that the p-value for the model would reach .025, whereas it had previously been at p = .06. In order to find a stronger general relationship between studying, college satisfaction, and grades, it may be helpful to delete this influential data point if I was to use this data in the future; however, this deletion would compromise the accurate representation of individual differences in the data.
+
+<<tidy=TRUE,fig.width=6,fig.height=4>>=
+plot(dffits(gradesmodel))
+plot(gradesmodel,which=4) 
+plot(dfbetas(gradesmodel))
+@
+
+<<tidy=TRUE>>=
+#original model
+gradesmodel<-(lm(harvarddata$Zavggrade~harvarddata$Zavgstudy+harvarddata$Zsatisfaction))
+summary(gradesmodel)
+#model with case #80 removed
+harvarddatano80<-harvarddata[-c(80),]
+gradesmodelno80<-(lm(harvarddatano80$Zavggrade~harvarddatano80$Zavgstudy+harvarddatano80$Zsatisfaction))
+summary(gradesmodelno80)
+
+@
+
+
+\maketitle
+\section*{Part 2}
+\subsection*{\#1}
+Time spent studying = b0 + b1(extraversion) + b2(conscientiousness) + b3(extraversion*conscientiousness)\\\\
+My hypothesis is that extraversion will be negatively related to time spent studying, conscientiousness will be positively related to time spent studying, and when conscientiousness is high the negative relationship between extraversion and studying will become weaker.\\\\
+Contrary to my hypotheses, the b1 coefficient indicates that when conscientiousness is zero, every 1-unit increase in extraversion leads to a 2.52-hour increase in time spent studying, though this result is not significant at p = .05. In line with my hypotheses, the b2 coefficient indicates that when extraversion is zero, every 1-unit increase in conscientiousness leads to a 4.06-hour increase in time spent studying. The p-value for the b3 coefficient indicates that there is a trend towards an interaction: I predict that the strength of the relationship between extraversion and study time will decrease as conscientiousness increases.
+<<tidy=TRUE>>=
+studymodel<-(lm(avgstudy~extra*consc,data=harvarddata2))
+summary(studymodel)
+@
+\subsection*{\#2}
+Means and standard deviations of variables
+<<tidy=TRUE,include=FALSE>>=
+Means<-c(5.31,5.72,30.83)
+SDs<-c(1.27,1.01,10.43)
+data.frame(Means,SDs)
+studydescriptives<-data.frame(Means,SDs)
+row.names(studydescriptives)<-c("Extraversion","Conscientiousness","Extraversion*Conscientiousness")
+@
+<<tidy=TRUE>>=
+kable(studydescriptives)
+
+@
+\vspace{5mm}
+\subsection*{\#3}
+Simple slope equations:\\\\
+$\hat Y$ = (b0 + b2Z) + (b1 + b3Z)X\\
+$\hat Y$ = (-1.58 + 4.06Z) + (2.52 - 0.52Z)X\\
+a)  Regression of Y (study time) on X (extraversion) at Zlow (mean - 1 SD = 4.71)\\\\ $\hat Y$ = (-1.58+4.06(4.71)) + (2.52-0.52(4.71))X = \textbf{$\hat Y$ = 17.54 + .07X} \\\\ When conscientiousness is low, for every 1-unit increase in extraversion, time spent studying increases by .07 hours.\\\\
+b)  Regression of Y (study time) on X (extraversion) at Zmean (mean = 5.72)\\\\
+$\hat Y$ = (-1.58+4.06(5.72)) + (2.52-0.52(5.72))X = \textbf{$\hat Y$ = 21.64 - .45X}\\\\
+When conscientiousness is average, for every 1-unit increase in extraversion, time spent studying decreases by .45 hours.\\\\
+c)  Regression of Y (study time) on X (extraversion) at Zhigh (mean + 1 SD = 6.73) \\\\ $\hat Y$ = (-1.58+4.06(6.73)) + (2.52-0.52(6.73))X = \textbf{$\hat Y$ = 25.74 - .98X}\\\\
+When conscientiousness is high, for every 1-unit increase in extraversion, time spent studying decreases by .98 hours.\\\\
+Overall, the slope, or the rate of change in study time per unit change in extraversion, becomes steeper and more negative as Z (conscientiousness) increases; extraversion seems to be more closely, and inversely tied to study time at higher levels of conscientiousness. Additionally, the intercept of study time (study time when extraversion = 0) increases as conscientiousness increases.
+\subsection*{\#4}
+Plot of simple slopes
+<<tidy=TRUE,message=FALSE,warning=FALSE,fig.width=5,fig.height=3>>=
+library(ggplot2)
+x1<-unique(harvarddata2$extra)
+y1<-c(mean(harvarddata2$consc,na.rm=TRUE),mean(harvarddata2$consc,na.rm=TRUE)-sd(harvarddata2$consc,na.rm=TRUE),mean(harvarddata2$consc,na.rm=TRUE)+sd(harvarddata2$consc,na.rm=TRUE))
+interaction <- expand.grid(x1, y1)
+colnames(interaction)<-c("extra","consc")
+z1 <- predict(object = studymodel, newdata = interaction)
+interaction <- cbind(interaction, z1)
+interaction$consc<- factor(interaction$consc, labels=c("-1 SD", "Mean", "+1 SD"))
+
+ggplot(interaction, aes(x = extra, y = z1, color = consc)) +
+  geom_smooth(method="lm", se=F)+ theme_bw()+ xlab("Extraversion") +
+  ylab("Hours Spent Studying")+scale_colour_discrete(name="Conscientiousness")
+@
+\vspace{5mm}
+\subsection*{\#5}
+First, I created standardized variables and re-ran the model with these variables to obtain the standardized regression coefficients.
+<<tidy=TRUE>>=
+Zextra<-scale(harvarddata2$extra,center=TRUE,scale=TRUE)
+Zconsc<-scale(harvarddata2$consc,center=TRUE,scale=TRUE)
+Zstudy<-scale(harvarddata2$avgstudy,center=TRUE,scale=TRUE)
+summary(lm(Zstudy~Zextra*Zconsc,data=harvarddata2))
+@
+Then, I plugged them into modified simple slopes equations. When Z is standardized, its standard deviation = 1 and its mean = 0. Therefore:\\
+
+When Z = 1 SD below its mean, the Z term drops out of the equation:\\
+$\hat Y$ = (b0 + b2Z) + (b1 + b3Z)X --\textgreater $\hat Y$ = (b0 - b2) + (b1 - b3)X \\\\
+When Z = its mean, the entire b2Z and b3Z terms drop out of the equation:\\
+$\hat Y$ = (b0 + b2Z) + (b1 + b3Z)X --\textgreater $\hat Y$ = (b0) + (b1)X \\\\
+When Z = 1 SD above its mean, the Z term drops out of the equation:\\
+$\hat Y$ = (b0 + b2Z) + (b1 + b3Z)X --\textgreater $\hat Y$ = (b0 + b2) + (b1 + b3)X \\\\
+
+Plugging in the values yields:\\\\
+\underline{When Z = Mean - 1 SD:}\\$\hat Y$ = (b0 - b2) + (b1 - b3)X\\
+$\hat Y$=(.07 - .22) + (-.10 - (-.11))X\\ \textbf{$\hat Y$ = -.15 + .01X} \\\\
+\underline{When Z = Mean:}\\$\hat Y$ = (b0) + (b1)X\\ \textbf{$\hat Y$ = .07 - .10X}\\\\
+\underline{When Z = Mean + 1 SD:}\\$\hat Y$ = (b0 + b2) + (b1 + b3)X\\ $\hat Y$ = (.07 + .22) + (-.10 + (-.11))X\\ \textbf{$\hat Y$ = .29 - .21X}
+\subsection*{\#6}
+The simple slope when conscientiousness is 1 SD above the mean is significantly different from zero, while the other two simple slopes are not. I conducted t-tests of the slopes:\\
+
+First, I found the standard error of the b1 coefficient at each level of conscientiousness (Z):\\\\
+Equation for SE(b at Z): sqrt($s_{1}^{2}$+ 2Z$s_{13}$ + $(Z)^{2}$$s_{3}^{2}$)\\
+Equation for t test = (b1 + b3Z)/SE(b at z)\\\\
+Known variables:\\\\
+SE of b1 = 1.70; b3 = .29\\
+Z = 4.71 (low), 5.72 (mean), 6.73 (high)\\
+b1 = 2.52, b3= -.52\\
+
+I generated the covariation matrix of the model to find the covariance between b1 and b3, for the SE(b at z) calculation:
+<<tidy=TRUE>>=
+vcov(studymodel)
+@
+Next, I used the SE calculation to find the standard error of b1 at Zlow, Zmean, and Zhigh:\\
+sqrt($s_{1}^{2}$+ 2Z$s_{13}$ + $(Z)^{2}$$s_{3}^{2}$)
+<<tidy=TRUE>>=
+sqrt((2.90)+(2*4.71*(-.485))+(22.18*(.085))) #SE of b1 at Zlow
+sqrt((2.90)+(2*5.72*(-.485))+(32.72*(.085))) #SE of b1 at Zmean
+sqrt((2.90)+(2*6.73*(-.485))+(45.29*(.085))) #SE of b1 at Zhigh
+
+@
+Then, I plugged in SE (b at z) to a t-test for Zlow, Zmean, and Zhigh:\\
+t(df)=(b1 + b3Z)/SE(b at z)
+<<tidy=TRUE>>=
+(2.52 + (-.52)*4.71)/.465 #t-test of b1 at Zlow
+(2.52 + (-.52)*5.72)/.364 #t-test of b1 at Zmean
+(2.52+ (-.52)*6.73)/.471 #t-test of b1 at Zhigh
+@
+The critical t-value for a 2-tailed test, df = 169, alpha = .05 is t(169)= 1.9741. Thus, the only significant simple slope is the slope at Zhigh, with a t value of -2.08.
+
+\subsection*{\#7}
+I compared the $R^{2}$ values of the model when run with the interaction term and when run without the interaction term to see how much variance was explained by the interaction term. The $R^{2}$ value increased from .060 to .078, indicating that the interaction term explained 1.8\% of the variance in the model.
+<<tidy=TRUE>>=
+#model without interaction term
+studymodel<-(lm(avgstudy~extra+consc,data=harvarddata2))
+summary(studymodel)
+
+#model with interaction term
+studymodel2<-(lm(avgstudy~extra*consc,data=harvarddata2))
+summary(studymodel2)
+@
+\subsection*{\#8}
+Overall, the model explained a significant amount of variance in study time, F(3,169) = 4.74, p = .003. There was no main effect of extraversion on hours spent studying, but there was a main effect of conscientiousness on hours spent studying (higher conscientiousness was related to more study time). Additionally, though extraversion was generally unrelated to study time, when conscientiousness was high, increases in extraversion were related to decreases in study time. Though the omnibus test for the interaction was not significant, the simple slope of extraversion at high levels of conscientiousness was significantly different from zero. However, given the lack of a significant interaction overall, it would not usually be advisable to analyze the simple slopes, and this particular significant simple slope could very well be due to Type I error. \\\\
+\maketitle
+\section*{Part 3A}
+\subsection*{\#1}
+X1: job RIASEC classification: Enterprising, Realistic, or Other (aggregate of remaining RIASEC codes)\\
+X2: job status\\
+Y: income\\\\
+I predict that participants in Enterprising jobs will have higher income compared to all other participants, whereas people in Realistic jobs will not have higher income compared to all other participants.\\
+\subsection*{\#2}
+I used effect coding, because I wanted to compare each job type to the average income of all job types:\\\\
+<<tidy=TRUE,include=FALSE>>=
+contrast1<-c(1,0,-1)
+contrast2<-c(0,1,-1)
+data.frame(contrast1,contrast2)
+contrasts<-data.frame(contrast1,contrast2)
+row.names(contrasts)<-c("Enterprising","Realistic","Other")
+colnames(contrasts)<-c("Contrast 1","Contrast 2")
+@
+<<tidy=TRUE>>=
+kable(contrasts)
+@
+\vspace{5mm}
+Participants in both Enterprising and Realistic jobs had significantly different income from the average, though in opposite directions. People in Enterprising jobs had higher income, whereas people in Realistic jobs had lower income.\\\\
+Predicted Y value (income) for each group (income was rated from 0 to 9):\\\\
+Enterprising \textit{(jobtype1)}: 6.948\\
+Realistic \textit{(jobtype2)}: 6.095\\
+Other: (don’t know from this coding scheme)\\
+\textit{Average = 6.487}
+<<tidy=TRUE,include=FALSE>>=
+library(plyr)
+interests <- read.csv("~/Dropbox/Stats/Take Home Exam/Kelly_Interests.csv")
+KLS.Strong <- read.csv("~/Dropbox/Lab & Research/Kelly/Data/KLS Strong Occupational Scales.csv")
+jobtype<-mapvalues(KLS.Strong$HollandT2Occ, from = c(1,2,3,4,5,6), to = c(2,3,3,3,1,3))
+interests$jobtype<-as.factor(jobtype)
+interests$jobtype<-factor(interests$jobtype,labels=c("Enterprising","Realistic","Other"))
+@
+<<tidy=TRUE>>=
+contrasts(interests$jobtype) = contr.sum(3)
+summary(lm(interests$mincome ~ interests$jobtype))
+@
+\subsection*{\#3}
+Using dummy coding, I can test whether people in Enterprising jobs have higher income than those in Realistic jobs, and I can also test whether people in Enterprising jobs have higher income compared to people in jobs with an “Other” classification.
+<<tidy=TRUE,include=FALSE>>=
+contrast3<-c(0,1,0)
+contrast4<-c(0,0,1)
+data.frame(contrast3,contrast4)
+dummy<-data.frame(contrast3,contrast4)
+row.names(dummy)<-c("Enterprising","Realistic","Other")
+colnames(dummy)<-c("Contrast 1","Contrast 2")
+@
+<<tidy=TRUE>>=
+kable(dummy)
+@
+
+<<tidy=TRUE>>=
+contrasts(interests$jobtype) = contr.treatment(3)
+summary(lm(mincome ~ jobtype,data=interests))
+@
+Both people in Realistic and Other occupations had significantly lower income than people in Enterprising occupations. \\
+
+Predicted Y value (income) for each group (income was rated from 0 to 9):\\
+Enterprising \textit{(intercept)}: 6.948\\
+Realistic \textit{(jobtype2)}: 6.095\\
+Other \textit{(jobtype3)}: 6.417\\\\
+The mean income for people in Enterprising and Realistic occupations was the same when I used effects coding and when I used dummy coding. In addition, the F-statistic and p-value for both models were the same. Though the comparison groups are different, the overall message was the same: Enterprising jobs had higher income than other types, and Realistic jobs had lower income than other types.\\\\
+Descriptives for job type factor and income variable:
+<<tidy=TRUE>>=
+table(interests$jobtype)
+describe(interests$mincome)
+@
+
+\subsection*{\#4}
+$SS_{between}$ is the amount of variance in income that is accounted for by job classification; its F-value and significance level are exactly the same as the F’s and p’s calculated for each of the above regression models, because ANOVA and the regression are both calculating how much variance in income is accounted for by the “job type” factor. $SS_{between}$ for this one-way ANOVA is thus similar to the $R^{2}$ value for the two regression models I ran earlier, since they only included one predictor.\\
+<<tidy=TRUE,include=FALSE>>=
+jobtype<-as.factor(jobtype)
+@
+
+<<tidy=TRUE>>=
+incomemodel<-aov(mincome ~ jobtype,data=interests)
+summary(incomemodel)
+@
+
+\subsection*{\#5}
+When run as an ANOVA, eta squared for the model is .0686; when run as a regression, the $R^{2}$ is the same value, .0686. Eta squared and $R^{2}$ are both measures of effect size, estimating the strength of the relationship between job type and income.
+\\\\
+<<tidy=TRUE,include=FALSE>>=
+library(lsr)
+@
+
+<<tidy=TRUE>>=
+etaSquared(incomemodel)
+@
+\subsection*{\#6}
+My hypothesis is that people in Enterprising occupations will have higher income than people in Realistic occupations, and that people in Enterprising occupations will also have higher income than people in Other occupations. I ran a Tukey LSD test; since the omnibus F-test was significant, it was appropriate to use this relatively less-conservative approach. My hypotheses were supported: the significant differences that contributed to the omnibus test results were between the Enterprising and Realistic occupations, and the Enterprising and Other occupations, such that people in Enterprising occupations had higher income than people in Realistic and in Other occupations.\\\\
+<<tidy=TRUE>>=
+TukeyHSD(incomemodel)
+@
+\subsection*{\#7}
+I added occupational status (as defined by national NORC rankings at the time of the study) as a covariate, since it is another occupational feature that may be associated with income level. Though the coefficient for Enterprising occupations remained significant, the coefficient for Realistic occupations did not. Thus, whether participants were in an Enterprising occupation or not still explained a significant amount of the variance in their income, when controlling for job status; however, when controlling for job status, whether participants were in a Realistic occupation no longer explained a significant amount of variance in their income.\\\\ Overall, the model accounted for more variance than it did before ($R^{2}$ = .218, compared to .0686 from before). Additionally, the total error decreased because some of the error from the first model has now been explained by the covariate of job status.\\\\
+<<tidy=TRUE>>=
+contrasts(interests$jobtype) = contr.sum(3)
+incomereg2<-lm(mincome ~ jobtype+mjobstatus,data=interests)
+summary(incomereg2)
+@
+\subsection*{\#8}
+The results are essentially the same as that of the regression, except that the factor of “job type” isn’t split into levels, so the F and p values are different from the regression for that particular factor. However, job status has the same significance value (and the corresponding F value given the t value it had in the regression, given that F = t${^2}$). As in the regression, the job type factor accounts for a significant amount of variance, even when job status is introduced as a covariate.
+<<tidy=TRUE>>=
+anova(incomereg2)
+@
+\maketitle
+\section*{Part 3B}
+\subsection*{\#1}
+IV1: education level: \textless 4 years college vs. 4 years college or more \\
+IV2: job type: Realistic job vs. non-Realistic job (Holland categorization)\\
+DV: income\\\\
+
+I predict that participants with at least 4 years of college education will have higher income than participants with under 4 years of college education. Additionally, I predict that those participants who have Realistic jobs will have lower income than those with non-Realistic jobs.
+\subsection*{\#2}
+I predict that college education will have a buffering effect, such that at high levels of education, those who have Realistic jobs will not have less income than those who have non-Realistic jobs.
+\subsection*{\#3}
+There was a main effect of college education, such that those with a 4-year degree or higher had higher income (M = 6.98) than those with less than a 4-year degree (M = 6.23), F(1,142) = 11.63, p \textless .001.\\\\
+There was also a main effect of job type, in that participants who had a Realistic job (M = 6.03) had lower income than those with a non-Realistic job (M = 6.96), F(1,142) = 14.29, p \textless .001.\\\\
+
+There was a trend towards an interaction, F(1,142) = 2.93, p = .09 (cell means and simple main effects reported in part 5).\\\\
+
+The eta-squared value for the overall model was .106; the eta-squared values were .002 for job change, .088 for education level, and .016 for the interaction between job change and education.\\
+<<tidy=TRUE,warning=FALSE>>=
+incomefanova<-aov(mincome~mmainjobR*education,data=interests)
+summary(incomefanova)
+etaSquared(incomefanova)
+#estimated means
+model.tables(incomefanova,"means",se=TRUE)
+@
+\subsection*{\#4}
+Plot of cell means
+<<tidy=TRUE,include=FALSE>>=
+library(effects)
+interests$mmainjobR<-as.factor(interests$mmainjobR)
+interests$education<-as.factor(interests$education)
+<<tidy=TRUE,warning=FALSE,fig.width=6,fig.height=4>>=
+
+cellmeans<-c(6.58,7.12,5.41,6.82)
+mmainjobR<-c("Other","Other","Realistic","Realistic")
+education<-c("Low","High","Low","High")
+lowerbound<-c(6.11,6.82,4.85,6.19)
+upperbound<-c(7.05,7.42,5.97,7.46)
+incomeinteraction<-cbind(cellmeans,mmainjobR,education,lowerbound,upperbound)
+incomeinteraction<-data.frame(incomeinteraction)
+
+ggplot(incomeinteraction, aes(x=mmainjobR, y=cellmeans, fill=education)) +
+geom_bar(position="dodge",colour="black", stat="identity",size=.3,width=.5) +
+geom_errorbar(aes(ymin=lowerbound, ymax=upperbound),size=.2,width=.2,position=position_dodge(.5))+
+xlab("Realistic Vs. Other Job") +
+ylab("Income") +
+scale_fill_hue(name="Education",breaks=c("Low", "High"),labels=c("Low", "High")) +
+theme_bw()
+@
+\subsection*{\#5}
+Simple main effects
+<<tidy=TRUE>>=
+incomedataOjob<-subset(interests, mmainjobR=="0")
+incomedataRjob<-subset(interests, mmainjobR=="1")
+incomedataloed<-subset(interests,education=="0")
+incomedatahied<-subset(interests,education=="1")
+
+anova(lm(mincome~education, incomedataOjob)) #effect of education when job type = Other
+anova(lm(mincome~education, incomedataRjob)) #effect of education when job type = Realistic
+anova(lm(mincome~mmainjobR, incomedataloed)) #effect of job type when education = low
+anova(lm(mincome~mmainjobR, incomedatahied)) #effect of job type when education = high
+
+@
+There was almost a simple main effect of education when participants had a non-Realistic job, F(1,105) = 3.39, p = .07. When participants had non-Realistic jobs, those who had more education had higher income (M=7.12) than participants with less education (M = 6.58).
+\\\\
+There was a simple main effect of education when participants had a Realistic job, F(1,37) = 13.71, p \textless .001. When participants had Realistic jobs, those with more education had higher income (M=6.82) than participants with less education (M=5.41).
+\\\\
+Additionally, there was a simple main effect of job type when participants had low education, F(1,51) = 10.87, p = .002. When participants had low education, those who had a Realistic job had lower income (M=5.41) than participants who had a non-Realistic job (M=6.58).
+\\\\
+Finally, there was no simple main effect of job type when participants had high education, F(1,91) = .66, p = .42. When participants had high education, those who had a non-Realistic job (M=7.12) did not have higher income than those who had a Realistic job (M=6.82).\\\\
+Overall, the trend is in support of my hypothesis: the difference in income for a "Realistic" job vs. a job coded with another classification is less when education is high than when it is low.
+\end{document}
